@@ -1,7 +1,6 @@
 package it.jaschke.alexandria;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -10,6 +9,7 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +19,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 
 import it.jaschke.alexandria.data.AlexandriaContract;
 import it.jaschke.alexandria.services.BookService;
@@ -36,6 +38,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
     private String mScanFormat = "Format:";
     private String mScanContents = "Contents:";
+    private String mScannedEan = "";
 
 
 
@@ -44,6 +47,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
+        Log.d("add book", "in onSaveInstanceState view");
         super.onSaveInstanceState(outState);
         if(ean!=null) {
             outState.putString(EAN_CONTENT, ean.getText().toString());
@@ -52,7 +56,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
     @Override
     public View onCreateView(final LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
+        Log.d("add book", "in oncreate view");
         rootView = inflater.inflate(R.layout.fragment_add_book, container, false);
         ean = (EditText) rootView.findViewById(R.id.ean);
 
@@ -69,6 +73,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
             @Override
             public void afterTextChanged(Editable s) {
+                Log.d("add book", "in afterTextChanged");
                 String ean =s.toString();
                 //catch isbn10 numbers
                 if(ean.length()==10 && !ean.startsWith("978")){
@@ -87,6 +92,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             }
         });
 
+        // TODO: implement book scanner
         rootView.findViewById(R.id.scan_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -96,12 +102,13 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 // Hint: Use a Try/Catch block to handle the Intent dispatch gracefully, if you
                 // are using an external app.
                 //when you're done, remove the toast below.
-                Context context = getActivity();
-                CharSequence text = "This button should let you scan a book for its barcode!";
-                int duration = Toast.LENGTH_SHORT;
-
-                Toast toast = Toast.makeText(context, text, duration);
-                toast.show();
+//                Context context = getActivity();
+                IntentIntegrator.forSupportFragment(AddBook.this).initiateScan();
+//                CharSequence text = "This button should let you scan a book for its barcode!";
+//                int duration = Toast.LENGTH_SHORT;
+//
+//                Toast toast = Toast.makeText(context, text, duration);
+//                toast.show();
 
             }
         });
@@ -116,8 +123,10 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         rootView.findViewById(R.id.delete_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                String eanStr= ean.getText().toString().length() != 0 ? ean.getText().toString() : mScannedEan;
+
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
-                bookIntent.putExtra(BookService.EAN, ean.getText().toString());
+                bookIntent.putExtra(BookService.EAN, eanStr);
                 bookIntent.setAction(BookService.DELETE_BOOK);
                 getActivity().startService(bookIntent);
                 ean.setText("");
@@ -132,16 +141,53 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         return rootView;
     }
 
+    // scanner results
+    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        Log.d("add book", "in onActivityResult view");
+        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+        if (scanResult != null) {
+            // handle scan result
+            Log.d("add book", scanResult.getContents());
+            clearFields();
+            ean.setText("");
+            mScannedEan = scanResult.getContents();
+            //catch isbn10 numbers
+            if(mScannedEan.length()==10 && !mScannedEan.startsWith("978")){
+                mScannedEan="978"+ mScannedEan;
+            }
+            if(mScannedEan.length()<13){
+                clearFields();
+                return;
+            }
+            //Once we have an ISBN, start a book intent
+            Intent bookIntent = new Intent(getActivity(), BookService.class);
+            bookIntent.putExtra(BookService.EAN, mScannedEan);
+            bookIntent.setAction(BookService.FETCH_BOOK);
+            getActivity().startService(bookIntent);
+            restartLoader();
+        } else {
+            // else continue with any other code you need in the method
+            CharSequence text = "Unable to get scan. Please try again.";
+            int duration = Toast.LENGTH_SHORT;
+
+            Toast toast = Toast.makeText(getContext(), text, duration);
+            toast.show();
+        }
+
+    }
+
     private void restartLoader(){
+        Log.d("add book", "in restartLoader");
         getLoaderManager().restartLoader(LOADER_ID, null, this);
     }
 
     @Override
     public android.support.v4.content.Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        if(ean.getText().length()==0){
+        Log.d("add book", "in onCreateLoader view");
+        if(ean.getText().length()==0 && mScannedEan.length() ==0){
             return null;
         }
-        String eanStr= ean.getText().toString();
+        String eanStr= ean.getText().toString().length() != 0 ? ean.getText().toString() : mScannedEan;
         if(eanStr.length()==10 && !eanStr.startsWith("978")){
             eanStr="978"+eanStr;
         }
@@ -157,6 +203,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<Cursor> loader, Cursor data) {
+        Log.d("add book", "in onLoadFinished");
         if (!data.moveToFirst()) {
             return;
         }
@@ -190,6 +237,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
     }
 
     private void clearFields(){
+        Log.d("add book", "in clearFields");
         ((TextView) rootView.findViewById(R.id.bookTitle)).setText("");
         ((TextView) rootView.findViewById(R.id.bookSubTitle)).setText("");
         ((TextView) rootView.findViewById(R.id.authors)).setText("");
