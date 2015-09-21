@@ -17,7 +17,6 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -145,12 +144,13 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
         Log.d("add book", "in onActivityResult view");
         IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
-        if (scanResult != null) {
+        mScannedEan = scanResult.getContents();
+        if (mScannedEan != null) {
             // handle scan result
-            Log.d("add book", scanResult.getContents());
+            Log.d("add book", mScannedEan);
             clearFields();
             ean.setText("");
-            mScannedEan = scanResult.getContents();
+
             //catch isbn10 numbers
             if(mScannedEan.length()==10 && !mScannedEan.startsWith("978")){
                 mScannedEan="978"+ mScannedEan;
@@ -165,14 +165,17 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             bookIntent.setAction(BookService.FETCH_BOOK);
             getActivity().startService(bookIntent);
             restartLoader();
-        } else {
-            // else continue with any other code you need in the method
-            CharSequence text = "Unable to get scan. Please try again.";
-            int duration = Toast.LENGTH_SHORT;
-
-            Toast toast = Toast.makeText(getContext(), text, duration);
-            toast.show();
         }
+        // we could show a message when scan doesn't finish, but need to think about how to
+        //      differentiate between a canceled scan and a scan error
+//        else {
+//            // else continue with any other code you need in the method
+//            CharSequence text = "Unable to get scan. Please try again.";
+//            int duration = Toast.LENGTH_SHORT;
+//
+//            Toast toast = Toast.makeText(getContext(), text, duration);
+//            toast.show();
+//        }
 
     }
 
