@@ -78,8 +78,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 if(ean.length()==10 && !ean.startsWith("978")){
                     ean="978"+ean;
                 }
-                if(ean.length()<13){
-                    clearFields();
+                if(ean.length()<13 || ean.length()>13){
                     return;
                 }
                 //Once we have an ISBN, start a book intent
@@ -91,24 +90,10 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             }
         });
 
-        // TODO: implement book scanner
         rootView.findViewById(R.id.scan_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // This is the callback method that the system will invoke when your button is
-                // clicked. You might do this by launching another app or by including the
-                //functionality directly in this app.
-                // Hint: Use a Try/Catch block to handle the Intent dispatch gracefully, if you
-                // are using an external app.
-                //when you're done, remove the toast below.
-//                Context context = getActivity();
                 IntentIntegrator.forSupportFragment(AddBook.this).initiateScan();
-//                CharSequence text = "This button should let you scan a book for its barcode!";
-//                int duration = Toast.LENGTH_SHORT;
-//
-//                Toast toast = Toast.makeText(context, text, duration);
-//                toast.show();
-
             }
         });
 
