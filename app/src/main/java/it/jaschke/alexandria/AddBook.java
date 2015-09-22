@@ -27,17 +27,19 @@ import it.jaschke.alexandria.services.DownloadImage;
 
 
 public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
-    private static final String TAG = "INTENT_TO_SCAN_ACTIVITY";
+//    private static final String TAG = "INTENT_TO_SCAN_ACTIVITY";
     private EditText ean;
     private final int LOADER_ID = 1;
     private View rootView;
     private final String EAN_CONTENT="eanContent";
-    private static final String SCAN_FORMAT = "scanFormat";
-    private static final String SCAN_CONTENTS = "scanContents";
-
-    private String mScanFormat = "Format:";
-    private String mScanContents = "Contents:";
+    private final String FOUND_BOOK_EAN_STR = "foundBookEan";
+//    private static final String SCAN_FORMAT = "scanFormat";
+//    private static final String SCAN_CONTENTS = "scanContents";
+//
+//    private String mScanFormat = "Format:";
+//    private String mScanContents = "Contents:";
     private String mScannedEan = "";
+    private String mFoundBookEan;
 
 
 
@@ -50,6 +52,9 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         super.onSaveInstanceState(outState);
         if(ean!=null) {
             outState.putString(EAN_CONTENT, ean.getText().toString());
+        }
+        if(mFoundBookEan!=null) {
+            outState.putString(FOUND_BOOK_EAN_STR, mFoundBookEan);
         }
     }
 
@@ -87,6 +92,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 bookIntent.setAction(BookService.FETCH_BOOK);
                 getActivity().startService(bookIntent);
                 AddBook.this.restartLoader();
+                mFoundBookEan = ean;
             }
         });
 
@@ -107,7 +113,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         rootView.findViewById(R.id.delete_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String eanStr= ean.getText().toString().length() != 0 ? ean.getText().toString() : mScannedEan;
+                String eanStr = ean.getText().toString().length() != 0 ? ean.getText().toString() : mScannedEan;
 
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
                 bookIntent.putExtra(BookService.EAN, eanStr);
@@ -118,8 +124,17 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         });
 
         if(savedInstanceState!=null){
-            ean.setText(savedInstanceState.getString(EAN_CONTENT));
+            ean.setText(savedInstanceState.getString(EAN_CONTENT, ""));
             ean.setHint("");
+            mFoundBookEan = savedInstanceState.getString(FOUND_BOOK_EAN_STR, null);
+
+            if (mFoundBookEan != null) {
+                Intent bookIntent = new Intent(getActivity(), BookService.class);
+                bookIntent.putExtra(BookService.EAN, mFoundBookEan);
+                bookIntent.setAction(BookService.FETCH_BOOK);
+                getActivity().startService(bookIntent);
+                restartLoader();
+            }
         }
 
         return rootView;
@@ -150,6 +165,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             bookIntent.setAction(BookService.FETCH_BOOK);
             getActivity().startService(bookIntent);
             restartLoader();
+            mFoundBookEan = mScannedEan;
         }
         // we could show a message when scan doesn't finish, but need to think about how to
         //      differentiate between a canceled scan and a scan error
@@ -172,10 +188,19 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
     @Override
     public android.support.v4.content.Loader<Cursor> onCreateLoader(int id, Bundle args) {
         Log.d("add book", "in onCreateLoader view");
-        if(ean.getText().length()==0 && mScannedEan.length() ==0){
+        if(ean.getText().length()==0 && mScannedEan.length() ==0 && mFoundBookEan == null){
             return null;
         }
-        String eanStr= ean.getText().toString().length() != 0 ? ean.getText().toString() : mScannedEan;
+        String eanStr;
+        if (ean.getText().toString().length() == 10 || ean.getText().toString().length() == 13) {
+            eanStr = ean.getText().toString();
+        }
+        else if (mScannedEan.length() == 10 || mScannedEan.length() == 13){
+            eanStr = mScannedEan;
+        } else {
+            eanStr = mFoundBookEan;
+        }
+
         if(eanStr.length()==10 && !eanStr.startsWith("978")){
             eanStr="978"+eanStr;
         }
