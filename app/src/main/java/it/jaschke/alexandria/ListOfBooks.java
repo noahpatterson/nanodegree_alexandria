@@ -1,15 +1,19 @@
 package it.jaschke.alexandria;
 
 import android.app.Activity;
+import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -52,11 +56,34 @@ public class ListOfBooks extends Fragment implements LoaderManager.LoaderCallbac
         bookListAdapter = new BookListAdapter(getActivity(), cursor, 0);
         View rootView = inflater.inflate(R.layout.fragment_list_of_books, container, false);
         searchText = (EditText) rootView.findViewById(R.id.searchText);
+
+        // search for book on keyboard search submit
+        searchText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
+                if (i == EditorInfo.IME_ACTION_SEARCH) {
+                    ListOfBooks.this.restartLoader();
+
+                    // closes the soft keyboard
+                    textView.clearFocus();
+                    InputMethodManager in = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    in.hideSoftInputFromWindow(textView.getWindowToken(), 0);
+                    return true;
+                }
+                return false;
+            }
+        });
+
         rootView.findViewById(R.id.searchButton).setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         ListOfBooks.this.restartLoader();
+
+                        // closes the soft keyboard
+                        v.clearFocus();
+                        InputMethodManager in = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                        in.hideSoftInputFromWindow(v.getWindowToken(), 0);
                     }
                 }
         );
