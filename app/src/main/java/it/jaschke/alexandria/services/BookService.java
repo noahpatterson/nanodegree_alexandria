@@ -50,6 +50,7 @@ public class BookService extends IntentService {
             if (FETCH_BOOK.equals(action)) {
                 final String ean = intent.getStringExtra(EAN);
                 fetchBook(ean);
+                return;
             } else if (DELETE_BOOK.equals(action)) {
                 final String ean = intent.getStringExtra(EAN);
                 deleteBook(ean);
@@ -202,9 +203,14 @@ public class BookService extends IntentService {
 
             writeBackBook(ean, title, subtitle, desc, imgUrl);
 
+            // FOR REVIEWER: Caught a situation that would cause the app to crash if there were no authors
+            JSONArray authors = new JSONArray();
+            authors.put("Unknown Author");
             if(bookInfo.has(AUTHORS)) {
-                writeBackAuthors(ean, bookInfo.getJSONArray(AUTHORS));
+                authors = bookInfo.getJSONArray(AUTHORS);
             }
+            writeBackAuthors(ean, authors);
+
             if(bookInfo.has(CATEGORIES)){
                 writeBackCategories(ean,bookInfo.getJSONArray(CATEGORIES) );
             }
