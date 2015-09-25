@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -12,6 +11,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -34,11 +34,14 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
 
     public static final String MESSAGE_EVENT = "MESSAGE_EVENT";
     public static final String MESSAGE_KEY = "MESSAGE_EXTRA";
+    private static final String LOG_TAG = "main activity";
+    private static final String BOOK_DETAIL_FRAG_PRESENCE = "book detail frag";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        IS_TABLET = isTablet();
+        Log.d(LOG_TAG, "in onCreate");
+        IS_TABLET = Utility.isTablet(getApplicationContext());
         if(IS_TABLET){
             setContentView(R.layout.activity_main_tablet);
         }else {
@@ -55,11 +58,49 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
 
         // Set up the drawer.
         navigationDrawerFragment.setUp(R.id.navigation_drawer,
-                    (DrawerLayout) findViewById(R.id.drawer_layout));
+                (DrawerLayout) findViewById(R.id.drawer_layout));
+
+        int id = R.id.container;
+        if(findViewById(R.id.right_container) != null){
+            id = R.id.right_container;
+        }
+
+        // add book_detail fragment if exists
+        if (savedInstanceState != null) {
+            if (savedInstanceState.getString(BookDetail.EAN_KEY) != null) {
+                Bundle args = new Bundle();
+                args.putString(BookDetail.EAN_KEY, savedInstanceState.getString(BookDetail.EAN_KEY));
+
+                BookDetail fragment = new BookDetail();
+                fragment.setArguments(args);
+
+                getSupportFragmentManager().beginTransaction()
+                        .replace(id, fragment, "Book Detail")
+                        .addToBackStack("Book Detail")
+                        .commit();
+            }
+        }
+
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        // detach fragment if exists
+        Fragment currFragment = getSupportFragmentManager().findFragmentByTag("Book Detail");
+        if (currFragment != null) {
+            getSupportFragmentManager().beginTransaction().remove(currFragment).commit();
+            outState.putString(BookDetail.EAN_KEY, currFragment.getArguments().getString(BookDetail.EAN_KEY));
+        }
+
+        super.onSaveInstanceState(outState);
+
+
+
     }
 
     @Override
     public void onNavigationDrawerItemSelected(int position) {
+        Log.d(LOG_TAG, "in onNavigationDrawerItemSelected");
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment nextFragment;
@@ -98,6 +139,7 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d(LOG_TAG, "in onCreateOptionsMenu");
         if (!navigationDrawerFragment.isDrawerOpen()) {
             // Only show items in the action bar relevant to this screen
             // if the drawer is not showing. Otherwise, let the drawer
@@ -126,12 +168,16 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
 
     @Override
     protected void onDestroy() {
+        Log.d(LOG_TAG, "in onDestroy");
         LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReciever);
+
+
         super.onDestroy();
     }
 
     @Override
     public void onItemSelected(String ean) {
+        Log.d(LOG_TAG, "in onItemSelected");
         Bundle args = new Bundle();
         args.putString(BookDetail.EAN_KEY, ean);
 
@@ -143,7 +189,7 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
             id = R.id.right_container;
         }
         getSupportFragmentManager().beginTransaction()
-                .replace(id, fragment)
+                .replace(id, fragment, "Book Detail")
                 .addToBackStack("Book Detail")
                 .commit();
 
@@ -158,14 +204,9 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
         }
     }
 
-    private boolean isTablet() {
-        return (getApplicationContext().getResources().getConfiguration().screenLayout
-                & Configuration.SCREENLAYOUT_SIZE_MASK)
-                >= Configuration.SCREENLAYOUT_SIZE_LARGE;
-    }
-
     @Override
     public void onBackPressed() {
+        Log.d(LOG_TAG, "in onBackPressed");
         if(getSupportFragmentManager().getBackStackEntryCount()<2){
             finish();
         }
