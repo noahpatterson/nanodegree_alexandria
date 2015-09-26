@@ -35,7 +35,10 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
     public static final String MESSAGE_EVENT = "MESSAGE_EVENT";
     public static final String MESSAGE_KEY = "MESSAGE_EXTRA";
     private static final String LOG_TAG = "main activity";
-    private static final String BOOK_DETAIL_FRAG_PRESENCE = "book detail frag";
+    private static final String NAV_DRAWER_STATE = "navDrawerFragment";
+    private static final String NAV_DRAWER_POS = "navDrawerPosition";
+    private static final String BOOK_DETAIL_FRAG_TAG = "Book Detail";
+    private static final String NAV_DRAWER_FRAG_TAG = "navigationDrawerFragment";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,8 +68,14 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
             id = R.id.right_container;
         }
 
-        // add book_detail fragment if exists
+        // restore the last current navigation drawer fragment
         if (savedInstanceState != null) {
+            int position = savedInstanceState.getInt(NAV_DRAWER_STATE, -1);
+            if (position != -1) {
+                attachNavDrawerFragment(position);
+            }
+
+            // add book_detail fragment if exists
             if (savedInstanceState.getString(BookDetail.EAN_KEY) != null) {
                 Bundle args = new Bundle();
                 args.putString(BookDetail.EAN_KEY, savedInstanceState.getString(BookDetail.EAN_KEY));
@@ -75,35 +84,18 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
                 fragment.setArguments(args);
 
                 getSupportFragmentManager().beginTransaction()
-                        .replace(id, fragment, "Book Detail")
-                        .addToBackStack("Book Detail")
+                        .replace(id, fragment, BOOK_DETAIL_FRAG_TAG)
+                        .addToBackStack(BOOK_DETAIL_FRAG_TAG)
                         .commit();
+
             }
         }
-
     }
 
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        // detach fragment if exists
-        Fragment currFragment = getSupportFragmentManager().findFragmentByTag("Book Detail");
-        if (currFragment != null) {
-            getSupportFragmentManager().beginTransaction().remove(currFragment).commit();
-            outState.putString(BookDetail.EAN_KEY, currFragment.getArguments().getString(BookDetail.EAN_KEY));
-        }
-
-        super.onSaveInstanceState(outState);
-
-
-
-    }
-
-    @Override
-    public void onNavigationDrawerItemSelected(int position) {
-        Log.d(LOG_TAG, "in onNavigationDrawerItemSelected");
-
+    private void attachNavDrawerFragment(int position) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment nextFragment;
+        Bundle args = new Bundle();
 
         switch (position){
             default:
@@ -116,13 +108,37 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
             case 2:
                 nextFragment = new About();
                 break;
-
         }
+        args.putInt(NAV_DRAWER_POS, position);
+        nextFragment.setArguments(args);
 
         fragmentManager.beginTransaction()
-                .replace(R.id.container, nextFragment)
+                .replace(R.id.container, nextFragment, NAV_DRAWER_FRAG_TAG)
                 .addToBackStack((String) title)
                 .commit();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        // save book detail and navigation drawer fragments
+        Fragment currDetailFragment = getSupportFragmentManager().findFragmentByTag(BOOK_DETAIL_FRAG_TAG);
+        Fragment navDrawerFragment = getSupportFragmentManager().findFragmentByTag(NAV_DRAWER_FRAG_TAG);
+        if (currDetailFragment != null) {
+            getSupportFragmentManager().popBackStack(BOOK_DETAIL_FRAG_TAG, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            outState.putString(BookDetail.EAN_KEY, currDetailFragment.getArguments().getString(BookDetail.EAN_KEY));
+        }
+
+        if (navDrawerFragment != null) {
+            outState.putInt(NAV_DRAWER_STATE, navDrawerFragment.getArguments().getInt(NAV_DRAWER_POS));
+        }
+
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onNavigationDrawerItemSelected(int position) {
+        Log.d(LOG_TAG, "in onNavigationDrawerItemSelected");
+        attachNavDrawerFragment(position);
     }
 
     public void setTitle(int titleId) {
@@ -162,7 +178,6 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
             startActivity(new Intent(this, SettingsActivity.class));
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -170,8 +185,6 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
     protected void onDestroy() {
         Log.d(LOG_TAG, "in onDestroy");
         LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReciever);
-
-
         super.onDestroy();
     }
 
@@ -189,8 +202,8 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
             id = R.id.right_container;
         }
         getSupportFragmentManager().beginTransaction()
-                .replace(id, fragment, "Book Detail")
-                .addToBackStack("Book Detail")
+                .replace(id, fragment, BOOK_DETAIL_FRAG_TAG)
+                .addToBackStack(BOOK_DETAIL_FRAG_TAG)
                 .commit();
 
     }
