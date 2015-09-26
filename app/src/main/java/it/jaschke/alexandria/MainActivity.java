@@ -31,13 +31,15 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
     private CharSequence title;
     public static boolean IS_TABLET = false;
     private BroadcastReceiver messageReciever;
+    private BroadcastReceiver deleteBookReceiver;
 
     public static final String MESSAGE_EVENT = "MESSAGE_EVENT";
     public static final String MESSAGE_KEY = "MESSAGE_EXTRA";
+    public static final String MESSAGE_DELETE_FROM_LIST = "MESSAGE_DELETE_FROM_LIST";
     private static final String LOG_TAG = "main activity";
     private static final String NAV_DRAWER_STATE = "navDrawerFragment";
     private static final String NAV_DRAWER_POS = "navDrawerPosition";
-    private static final String BOOK_DETAIL_FRAG_TAG = "Book Detail";
+    public static final String BOOK_DETAIL_FRAG_TAG = "Book Detail";
     private static final String NAV_DRAWER_FRAG_TAG = "navigationDrawerFragment";
 
     @Override
@@ -54,6 +56,12 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
         messageReciever = new MessageReciever();
         IntentFilter filter = new IntentFilter(MESSAGE_EVENT);
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReciever,filter);
+
+        //delete book receiver to restartLoader
+        deleteBookReceiver = new DeleteBookReceiver();
+        IntentFilter deleteBookfilter = new IntentFilter(MESSAGE_DELETE_FROM_LIST);
+        LocalBroadcastManager.getInstance(this).registerReceiver(deleteBookReceiver,deleteBookfilter);
+
 
         navigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
@@ -213,6 +221,16 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
         public void onReceive(Context context, Intent intent) {
             if(intent.getStringExtra(MESSAGE_KEY)!=null){
                 Toast.makeText(MainActivity.this, intent.getStringExtra(MESSAGE_KEY), Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private class DeleteBookReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+           ListOfBooks listOfBooks = (ListOfBooks) getSupportFragmentManager().findFragmentById(R.id.container);
+            if (listOfBooks != null) {
+                listOfBooks.restartLoader();
             }
         }
     }
