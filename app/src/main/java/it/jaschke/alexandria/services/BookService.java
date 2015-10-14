@@ -207,7 +207,7 @@ public class BookService extends IntentService {
 
             // FOR REVIEWER: Caught a situation that would cause the app to crash if there were no authors
             JSONArray authors = new JSONArray();
-            authors.put("Unknown Author");
+            authors.put(getString(R.string.default_author_name));
             if(bookInfo.has(AUTHORS)) {
                 authors = bookInfo.getJSONArray(AUTHORS);
             }
