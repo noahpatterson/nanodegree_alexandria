@@ -86,6 +86,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                     ean="978"+ean;
                 }
                 if(ean.length()<13 || ean.length()>13){
+                    clearFields();
                     return;
                 }
                 //Once we have an ISBN, start a book intent
@@ -93,7 +94,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 bookIntent.putExtra(BookService.EAN, ean);
                 bookIntent.setAction(BookService.FETCH_BOOK);
                 getActivity().startService(bookIntent);
-                AddBook.this.restartLoader();
+//                AddBook.this.restartLoader();
                 mFoundBookEan = ean;
 
                 // closes the soft keyboard
@@ -117,15 +118,22 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             }
         });
 
+        //TODO: crash deleting book here, with no author isbn: 1412714990
         rootView.findViewById(R.id.delete_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String eanStr = ean.getText().toString().length() != 0 ? ean.getText().toString() : mScannedEan;
 
+                //catch isbn10 numbers
+                if(eanStr.length()==10 && !eanStr.startsWith("978")){
+                    eanStr="978"+ eanStr;
+                }
+
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
                 bookIntent.putExtra(BookService.EAN, eanStr);
                 bookIntent.setAction(BookService.DELETE_BOOK);
                 getActivity().startService(bookIntent);
+                mFoundBookEan = null;
                 ean.setText("");
             }
         });
@@ -171,7 +179,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             bookIntent.putExtra(BookService.EAN, mScannedEan);
             bookIntent.setAction(BookService.FETCH_BOOK);
             getActivity().startService(bookIntent);
-            restartLoader();
+//            restartLoader();
             mFoundBookEan = mScannedEan;
         }
         // we could show a message when scan doesn't finish, but need to think about how to
@@ -187,7 +195,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
     }
 
-    private void restartLoader(){
+    public void restartLoader(){
         Log.d("add book", "in restartLoader");
         getLoaderManager().restartLoader(LOADER_ID, null, this);
     }
@@ -196,6 +204,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
     public android.support.v4.content.Loader<Cursor> onCreateLoader(int id, Bundle args) {
         Log.d("add book", "in onCreateLoader view");
         if(ean.getText().length()==0 && mScannedEan.length() ==0 && mFoundBookEan == null){
+            clearFields();
             return null;
         }
         String eanStr;

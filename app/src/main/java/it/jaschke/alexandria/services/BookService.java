@@ -70,11 +70,17 @@ public class BookService extends IntentService {
         }
     }
 
+    private void sendBookLoadedBroadcast(){
+        Intent messageIntent = new Intent(MainActivity.MESSAGE_FOUND_BOOK);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+    }
+
     /**
      * Handle action fetchBook in the provided background thread with the provided
      * parameters.
      */
     private void fetchBook(String ean) {
+        Log.d(LOG_TAG, "in fetchBook");
 
         if(ean.length()!=13){
             return;
@@ -216,6 +222,8 @@ public class BookService extends IntentService {
             if(bookInfo.has(CATEGORIES)){
                 writeBackCategories(ean,bookInfo.getJSONArray(CATEGORIES) );
             }
+
+            sendBookLoadedBroadcast();
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, "Error ", e);

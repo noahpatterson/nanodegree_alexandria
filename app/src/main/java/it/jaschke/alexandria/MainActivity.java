@@ -32,10 +32,12 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
     public static boolean IS_TABLET = false;
     private BroadcastReceiver messageReciever;
     private BroadcastReceiver deleteBookReceiver;
+    private BroadcastReceiver foundBookReceiver;
 
     public static final String MESSAGE_EVENT = "MESSAGE_EVENT";
     public static final String MESSAGE_KEY = "MESSAGE_EXTRA";
     public static final String MESSAGE_DELETE_FROM_LIST = "MESSAGE_DELETE_FROM_LIST";
+    public static final String MESSAGE_FOUND_BOOK = "FOUND_BOOK";
     private static final String LOG_TAG = "main activity";
     private static final String NAV_DRAWER_STATE = "navDrawerFragment";
     private static final String NAV_DRAWER_POS = "navDrawerPosition";
@@ -61,6 +63,11 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
         deleteBookReceiver = new DeleteBookReceiver();
         IntentFilter deleteBookfilter = new IntentFilter(MESSAGE_DELETE_FROM_LIST);
         LocalBroadcastManager.getInstance(this).registerReceiver(deleteBookReceiver,deleteBookfilter);
+
+        //restart loader after book is found
+        foundBookReceiver = new FoundBookReceiver();
+        IntentFilter foundBookfilter = new IntentFilter(MESSAGE_FOUND_BOOK);
+        LocalBroadcastManager.getInstance(this).registerReceiver(foundBookReceiver,foundBookfilter);
 
 
         navigationDrawerFragment = (NavigationDrawerFragment)
@@ -228,9 +235,23 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
     private class DeleteBookReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-           ListOfBooks listOfBooks = (ListOfBooks) getSupportFragmentManager().findFragmentById(R.id.container);
-            if (listOfBooks != null) {
+            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.container);
+            if (fragment != null && fragment instanceof AddBook) {
+                AddBook addBook = (AddBook) fragment;
+                addBook.restartLoader();
+            } else if (fragment != null && fragment instanceof ListOfBooks) {
+                ListOfBooks listOfBooks = (ListOfBooks) fragment;
                 listOfBooks.restartLoader();
+            }
+        }
+    }
+
+    private class FoundBookReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            AddBook addBook = (AddBook) getSupportFragmentManager().findFragmentById(R.id.container);
+            if (addBook != null) {
+                addBook.restartLoader();
             }
         }
     }
